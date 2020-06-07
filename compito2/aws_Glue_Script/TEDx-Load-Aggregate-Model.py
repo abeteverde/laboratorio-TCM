@@ -32,18 +32,18 @@ spark = glueContext.spark_session
 
 
     
-    job = Job(glueContext)
-    job.init(args['JOB_NAME'], args)
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
 
 
 #### READ INPUT FILES TO CREATE AN INPUT DATASET
 tedx_dataset = spark.read \
     .option("header","true") \
-        .option("quote", "\"") \
-	    .option("escape", "\"") \
-	        .csv(tedx_dataset_path)
-		   # le ultime due option servono per leggere il contenuto tra due apici come un blocco unico (evita di confondere le virgole all'interno del testo con dei separatori)
-		    tedx_dataset.printSchema()
+    .option("quote", "\"") \
+    .option("escape", "\"") \
+    .csv(tedx_dataset_path)
+# le ultime due option servono per leggere il contenuto tra due apici come un blocco unico (evita di confondere le virgole all'interno del testo con dei separatori)
+tedx_dataset.printSchema()
 
 
 #### FILTER ITEMS WITH NULL POSTING KEY
@@ -66,25 +66,25 @@ tags_dataset_agg = tags_dataset.groupBy(col("idx").alias("idx_ref")).agg(collect
 tags_dataset_agg.printSchema()
 tedx_dataset_agg = tedx_dataset.join(tags_dataset_agg, tedx_dataset.idx == tags_dataset_agg.idx_ref, "left") \
     .drop("idx_ref") \
-        .select(col("idx").alias("_id"), col("*")) \
-	    .drop("idx") \
-
-	    tedx_dataset_agg.printSchema()
-
-
+    .select(col("idx").alias("_id"), col("*")) \
+    .drop("idx") \
+#_id serve per dire a mongoDB di indicizzare secondo quel campo, altrimenti si inventa lui degli indici
+tedx_dataset_agg.printSchema()
 
 
-	    mongo_uri = "xxxx"
 
-	    write_mongo_options = {
-		        "uri": mongo_uri,
-			    "database": "unibg_tedx",
-			        "collection": "tedz_data",
-				    "username": "admin",
-				        "password": "xxxxx",
-					    "ssl": "true",
-					        "ssl.domain_match": "false"}
-						from awsglue.dynamicframe import DynamicFrame
-						tedx_dataset_dynamic_frame = DynamicFrame.fromDF(tedx_dataset_agg, glueContext, "nested")
 
-						glueContext.write_dynamic_frame.from_options(tedx_dataset_dynamic_frame, connection_type="mongodb", connection_options=write_mongo_options)
+mongo_uri = "mongodb://cluster-tcm-shard-00-00-xiiyc.mongodb.net:27017,cluster-tcm-shard-00-01-xiiyc.mongodb.net:27017,cluster-tcm-shard-00-02-xiiyc.mongodb.net:27017"
+
+write_mongo_options = {
+    "uri": mongo_uri,
+    "database": "unibg_tedx",
+    "collection": "tedz_data",
+    "username": "admin",
+    "password": "xxx",
+    "ssl": "true",
+    "ssl.domain_match": "false"}
+from awsglue.dynamicframe import DynamicFrame
+tedx_dataset_dynamic_frame = DynamicFrame.fromDF(tedx_dataset_agg, glueContext, "nested")
+
+glueContext.write_dynamic_frame.from_options(tedx_dataset_dynamic_frame, connection_type="mongodb", connection_options=write_mongo_options)
