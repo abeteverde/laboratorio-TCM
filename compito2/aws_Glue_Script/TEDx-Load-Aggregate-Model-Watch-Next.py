@@ -57,7 +57,7 @@ tags_dataset = spark.read.option("header","true").csv(tags_dataset_path)
 # CREATE THE AGGREGATE MODEL, ADD TAGS TO TEDX_DATASET
 tags_dataset_agg = tags_dataset.groupBy(col("idx").alias("idx_ref")).agg(collect_list("tag").alias("tags"))
 tags_dataset_agg.printSchema()
-tedx_dataset_agg = tedx_dataset_filtered.join(tags_dataset_agg, tedx_dataset.idx == tags_dataset_agg.idx_ref, "left") \
+tedx_dataset_agg = tedx_dataset_filtered.join(tags_dataset_agg, tedx_dataset_filtered.idx == tags_dataset_agg.idx_ref, "left") \
     .drop("idx_ref") \
 # attenzione, la parte di modifica dell'etichetta idx va fatta una sola volta prima di caricare su mongo DB, è inutile farla qui
 tedx_dataset_agg.printSchema()
